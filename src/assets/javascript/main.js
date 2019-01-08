@@ -1,9 +1,10 @@
+//@flow
 import citations from "./citations";
 import footnotes from "./footnotes";
 import highlightRange from "./highlight";
 import debounce from "./debounce";
 
-export default function main(el) {
+export default function main(el: Element): void {
   citations(el);
   footnotes(el);
 
