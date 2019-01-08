@@ -18,6 +18,7 @@ function postprocess(htmlString, options) {
   postprocessors.headings(document);
   postprocessors.links(document);
   postprocessors.math(document);
+  postprocessors.uids(document);
 
   return dom.serialize();
 }

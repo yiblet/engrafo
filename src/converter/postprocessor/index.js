@@ -4,5 +4,6 @@ module.exports = {
   footnotes: require("./footnotes"),
   headings: require("./headings"),
   links: require("./links"),
-  math: require("./math")
+  math: require("./math"),
+  uids: require("./uids")
 };
