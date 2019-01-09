@@ -16,7 +16,7 @@ export default function highlightRange(rangeObject, highlightClass) {
   }
 
   // First put all nodes in an array (splits start and end nodes)
-  var nodes = textNodesInRange(rangeObject);
+  var nodes = textNodesInRange(rangeObject, NodeFilter.SHOW_TEXT);
 
   // Remember range details to restore it later.
   var startContainer = rangeObject.startContainer;
@@ -55,7 +55,7 @@ export default function highlightRange(rangeObject, highlightClass) {
 }
 
 // Return an array of the text nodes in the range. Split the start and end nodes if required.
-function textNodesInRange(rangeObject) {
+export function textNodesInRange(rangeObject, filter = NodeFilter.SHOW_ALL) {
   // Modify Range to make sure that the start and end nodes are text nodes.
   setRangeToTextNodes(rangeObject);
 
@@ -93,7 +93,7 @@ function textNodesInRange(rangeObject) {
     typeof rangeObject.commonAncestorContainer != "undefined"
       ? rangeObject.commonAncestorContainer
       : document.body; // fall back to whole document for browser compatibility
-  var iter = document.createNodeIterator(root, NodeFilter.SHOW_TEXT);
+  var iter = document.createNodeIterator(root, filter);
 
   // Find the start node (could we somehow skip this seemingly needless search?)
   while (
