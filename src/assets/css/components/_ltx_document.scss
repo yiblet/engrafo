@@ -2,8 +2,6 @@
 
 .ltx_document {
   background: white;
-  margin-top: 4em;
-  margin-bottom: 4em;
 
   width: auto;
   margin-left: 8px;
@@ -12,14 +10,10 @@
 
   @include media(">=tablet", "<desktop") {
     width: 650px;
-    margin-left: auto;
-    margin-right: auto;
   }
 
   @include media(">=desktop") {
     width: 900px;
-    margin-left: auto;
-    margin-right: auto;
 
     // Everything is 700px wide
     & > *,

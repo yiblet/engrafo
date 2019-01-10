@@ -1,0 +1,43 @@
+.btn-default {
+    font-family: 'Helvetica', sans-serif;
+    font-size: 0.9rem;
+    color: rgba(0, 0, 0, 0.80);
+    min-height: 32px;
+    border-radius: 4px;
+    horizontal-padding: 12px;
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+.btn-light {
+    @extend .btn-default;
+    background-color: inherit;
+    border-width: 0px;
+    color: rgba(0, 0, 0, 0.70);
+    margin-left: 5px;
+}
+
+
+.btn-light:hover {
+    color: rgba(0, 0, 0, 1);
+    font-weight: 500;
+}
+
+.editor-bottom {
+    display: flex;
+    flex-direction: row;
+    align-content: flex-center;
+    border-top: 1px solid #ddd;
+    padding-top: 0.8rem;
+    justify-content: space-between;
+}
+
+.bottom-text {
+    margin: 9px 0;
+    color: rgba(0, 0, 0, 0.5);
+}
+
+.btn-container {
+    display: flex;
+    flex-direction: row-reverse;
+}

@@ -5,26 +5,30 @@ import highlightRange from "./highlight";
 import setupReact from "./setup-react";
 import debounce from "./debounce";
 
+function wrap(el: Element) {
+  let pageContent = el.querySelector(".ltx_page_content");
+  if (!pageContent) return;
+  let div = document.createElement("div");
+  div.id = "wrapper";
+  div.className += "ltx_container";
+  for (var i = 0, len = pageContent.children.length; i < len; i++) {
+    div.appendChild(pageContent.children[i]);
+  }
+
+  let div2 = document.createElement("div");
+  div2.id = "comments";
+  div2.className += "placeholder";
+  div.appendChild(div2);
+
+  pageContent.appendChild(div);
+}
+
 export default function main(el: ?Element): void {
   if (!el) return;
+  wrap(el);
   citations(el);
   footnotes(el);
-  setupReact(el);
 
-  let active_ranges = new Set();
-  document.addEventListener(
-    "selectionchange",
-    debounce(() => {
-      let selection = window.getSelection();
-      active_ranges.forEach(
-        unhighlight => unhighlight instanceof Function && unhighlight()
-      );
-      active_ranges.clear();
-      for (let i = 0; i < selection.rangeCount; ++i) {
-        let range = selection.getRangeAt(i);
-        let undo = highlightRange(range, "highlight");
-        active_ranges.add(undo);
-      }
-    }, 500)
-  );
+  setupReact(el);
+  console.log(el);
 }

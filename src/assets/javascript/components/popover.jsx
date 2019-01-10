@@ -3,6 +3,7 @@ import React from "react";
 import { textNodesInRange } from "./../highlight";
 import debounce from "./../debounce";
 import Editor from "./editor";
+import highlightRange from "../highlight";
 
 type State = {
   boundingRect: ?DOMRect,
@@ -10,6 +11,7 @@ type State = {
   offsets: { x: number, y: number },
   selected: boolean,
   selected_listener: () => void,
+  active_ranges: Set<() => void>,
   timeout?: number
 };
 
@@ -19,6 +21,7 @@ export default class Popover extends React.Component<{}, State> {
     hover: false,
     boundingRect: null,
     offsets: { x: 0, y: 0 },
+    active_ranges: new Set(),
     selected_listener: () => {}
   };
 
@@ -26,15 +29,28 @@ export default class Popover extends React.Component<{}, State> {
   static DEBOUNCE_WAIT = 500;
   static TIME_TO_MOUSE_OUT = 1000;
 
+  clear_ranges = () => {
+    this.state.active_ranges.forEach(
+      undo => undo instanceof Function && undo()
+    );
+    this.state.active_ranges.clear();
+  };
+
   selected_listener = () => {
-    console.log(`New ${Popover.EVENT}`);
     let currentSelection = window.getSelection();
-    if (currentSelection.rangeCount === 0) currentSelection = null;
-    if (currentSelection) {
+    if (currentSelection.rangeCount !== 0) {
       let currentRange = currentSelection.getRangeAt(0);
-      this.setState((state, props) => {
+      this.setState(state => {
+        let { active_ranges } = state;
         let boundingRect = currentRange.getBoundingClientRect();
         if (boundingRect.width !== 0 && boundingRect.height !== 0) {
+          this.clear_ranges();
+          for (let i = 0; i < currentSelection.rangeCount; ++i) {
+            let range = currentSelection.getRangeAt(i);
+            if (!range) continue;
+            let undo = highlightRange(range, "highlight");
+            active_ranges.add(undo);
+          }
           return {
             selected: true,
             boundingRect: boundingRect,
@@ -50,22 +66,33 @@ export default class Popover extends React.Component<{}, State> {
         }
       });
     } else {
-      this.setState({ selected: false });
+      this.setState(state => {
+        this.clear_ranges();
+        return {
+          selected: false
+        };
+      });
     }
   };
 
   hoverOn = () => {
-    this.setState((state, props) => {
+    this.setState(state => {
       if (state.timeout) window.clearTimeout(state.timeout);
       return { hover: true, timeout: undefined };
     });
   };
   hoverOff = () => {
-    this.setState((state, props) => {
+    this.setState(state => {
       if (state.timeout) window.clearTimeout(state.timeout);
       return {
         timeout: window.setTimeout(
-          () => this.setState({ hover: false }),
+          () =>
+            this.setState(state => {
+              this.clear_ranges();
+              return {
+                hover: false
+              };
+            }),
           Popover.TIME_TO_MOUSE_OUT
         )
       };
@@ -88,7 +115,6 @@ export default class Popover extends React.Component<{}, State> {
   render() {
     if ((this.state.selected || this.state.hover) && this.state.boundingRect) {
       let { top, left, width, height } = this.state.boundingRect;
-      console.log(this.state.boundingRect);
       return (
         <div
           onMouseEnter={this.hoverOn}
@@ -98,13 +124,15 @@ export default class Popover extends React.Component<{}, State> {
             position: "absolute",
             backgroundColor: "white",
             top: top + this.state.offsets.y + height,
-            left: left + this.state.offsets.x
+            left: left + this.state.offsets.x,
+            minWidth: width
           }}
         >
           <Editor />
         </div>
       );
     } else {
+      this.clear_ranges();
       return <div />;
     }
   }

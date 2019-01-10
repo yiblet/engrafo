@@ -1,21 +1,20 @@
 import React from "react";
 import { Editor, EditorState, RichUtils } from "draft-js";
+import "../../css/modules/button.scss";
 
+// props { readOnly, defaultState }
 export default class RichEditorExample extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { editorState: EditorState.createEmpty() };
+  state = { editorState: EditorState.createEmpty() };
 
-    this.focus = () => this.refs.editor.focus();
-    this.onChange = editorState => this.setState({ editorState });
+  focus = () => {
+    this.refs.editor.focus();
+  };
 
-    this.handleKeyCommand = command => this._handleKeyCommand(command);
-    this.onTab = e => this._onTab(e);
-    this.toggleBlockType = type => this._toggleBlockType(type);
-    this.toggleInlineStyle = style => this._toggleInlineStyle(style);
-  }
+  onChange = editorState => {
+    this.setState({ editorState });
+  };
 
-  _handleKeyCommand(command) {
+  handleKeyCommand = command => {
     const { editorState } = this.state;
     const newState = RichUtils.handleKeyCommand(editorState, command);
     if (newState) {
@@ -23,21 +22,27 @@ export default class RichEditorExample extends React.Component {
       return true;
     }
     return false;
-  }
+  };
 
-  _onTab(e) {
+  onTab = e => {
     const maxDepth = 4;
     this.onChange(RichUtils.onTab(e, this.state.editorState, maxDepth));
-  }
+  };
 
-  _toggleBlockType(blockType) {
+  toggleBlockType = blockType => {
     this.onChange(RichUtils.toggleBlockType(this.state.editorState, blockType));
-  }
+  };
 
-  _toggleInlineStyle(inlineStyle) {
+  toggleInlineStyle = inlineStyle => {
     this.onChange(
       RichUtils.toggleInlineStyle(this.state.editorState, inlineStyle)
     );
+  };
+
+  // -- methods
+  constructor(props) {
+    super(props);
+    if (props.initialState) this.onChange(props.initialState);
   }
 
   render() {
@@ -58,16 +63,24 @@ export default class RichEditorExample extends React.Component {
       }
     }
 
+    console.log(this.props.readOnly);
+
     return (
       <div className="RichEditor-root">
-        <BlockStyleControls
-          editorState={editorState}
-          onToggle={this.toggleBlockType}
-        />
-        <InlineStyleControls
-          editorState={editorState}
-          onToggle={this.toggleInlineStyle}
-        />
+        {!this.props.readOnly ? (
+          <React.Fragment>
+            <BlockStyleControls
+              editorState={editorState}
+              onToggle={this.toggleBlockType}
+            />
+            <InlineStyleControls
+              editorState={editorState}
+              onToggle={this.toggleInlineStyle}
+            />
+          </React.Fragment>
+        ) : (
+          <React.Fragment />
+        )}
         <div className={className} onClick={this.focus}>
           <Editor
             blockStyleFn={getBlockStyle}
@@ -76,11 +89,22 @@ export default class RichEditorExample extends React.Component {
             handleKeyCommand={this.handleKeyCommand}
             onChange={this.onChange}
             onTab={this.onTab}
-            placeholder="Make a comment..."
             ref="editor"
             spellCheck={true}
+            readOnly={this.props.readOnly}
           />
         </div>
+        {!this.props.readOnly ? (
+          <div className="editor-bottom">
+            <span className="bottom-text"> Add a Comment...</span>
+            <div className="btn-container">
+              <button className="btn-light">Submit</button>
+              <button className="btn-light">Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <React.Fragment />
+        )}
       </div>
     );
   }
@@ -129,15 +153,12 @@ class StyleButton extends React.Component {
 }
 
 const BLOCK_TYPES = [
-  { label: "H1", style: "header-one" },
-  { label: "H2", style: "header-two" },
-  { label: "H3", style: "header-three" },
-  { label: "H4", style: "header-four" },
-  { label: "H5", style: "header-five" },
-  { label: "H6", style: "header-six" },
-  { label: "Blockquote", style: "blockquote" },
-  { label: "UL", style: "unordered-list-item" },
-  { label: "OL", style: "ordered-list-item" },
+  { label: "Title", style: "header-one" },
+  { label: "Subtitle", style: "header-two" },
+  { label: "Subsubtitle", style: "header-three" },
+  { label: "Quote", style: "blockquote" },
+  { label: "Numbered List", style: "unordered-list-item" },
+  { label: "Bullet List", style: "ordered-list-item" },
   { label: "Code Block", style: "code-block" }
 ];
 

@@ -2,7 +2,7 @@ const path = require("path");
 const { integrationDocuments, renderToDom } = require("./utils");
 
 beforeAll(async () => {
-  jasmine.DEFAULT_TIMEOUT_INTERVAL = 100000;
+  jasmine.DEFAULT_TIMEOUT_INTERVAL = 300000;
 });
 
 afterAll(async () => {

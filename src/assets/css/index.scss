@@ -7,11 +7,19 @@ body {
   background-color: yellow;
 }
 
+.comments {
+    width: 300px;
+    height: 100%;
+    margin-left: 15px;
+}
+
+
 // Contain everything inside .ltx_page_main
 .ltx_page_main {
   text-rendering: optimizeLegibility;
 
   // .ltx_document is the root element for most of the document, containing the grid layout
+  @import "./components/ltx_container";
   @import "./components/ltx_document";
 
   @import "./components/errors";
