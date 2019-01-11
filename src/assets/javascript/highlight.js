@@ -130,21 +130,21 @@ export function textNodesInRange(rangeObject, filter = NodeFilter.SHOW_ALL) {
   return nodes;
 }
 
+export function getFirstTextNode(node) {
+  if (node.nodeType === Node.TEXT_NODE) return node;
+  var document = node.ownerDocument;
+  var walker = document.createTreeWalker(
+    node,
+    NodeFilter.SHOW_TEXT,
+    null,
+    false
+  );
+  return walker.firstChild();
+}
+
 // Normalise the range to start and end in a text node.
 // Copyright (c) 2015 Randall Leeds
-function setRangeToTextNodes(rangeObject) {
-  function getFirstTextNode(node) {
-    if (node.nodeType === Node.TEXT_NODE) return node;
-    var document = node.ownerDocument;
-    var walker = document.createTreeWalker(
-      node,
-      NodeFilter.SHOW_TEXT,
-      null,
-      false
-    );
-    return walker.firstChild();
-  }
-
+export function setRangeToTextNodes(rangeObject) {
   var startNode = rangeObject.startContainer;
   var startOffset = rangeObject.startOffset;
 

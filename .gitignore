@@ -17,3 +17,5 @@ dist
 
 .vscode
 **.*sw[poa]
+generated
+**/__generated__

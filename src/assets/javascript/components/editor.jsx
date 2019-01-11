@@ -63,8 +63,6 @@ export default class RichEditorExample extends React.Component {
       }
     }
 
-    console.log(this.props.readOnly);
-
     return (
       <div className="RichEditor-root">
         {!this.props.readOnly ? (
@@ -94,17 +92,7 @@ export default class RichEditorExample extends React.Component {
             readOnly={this.props.readOnly}
           />
         </div>
-        {!this.props.readOnly ? (
-          <div className="editor-bottom">
-            <span className="bottom-text"> Add a Comment...</span>
-            <div className="btn-container">
-              <button className="btn-light">Submit</button>
-              <button className="btn-light">Cancel</button>
-            </div>
-          </div>
-        ) : (
-          <React.Fragment />
-        )}
+        {this.props.children}
       </div>
     );
   }
