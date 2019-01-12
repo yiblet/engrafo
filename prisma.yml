@@ -3,4 +3,4 @@ datamodel: datamodel.graphql
 
 generate:
   - generator: graphql-schema
-    output: ../generated/
+    output: generated/
