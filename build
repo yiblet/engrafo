@@ -1,0 +1,7 @@
+#! /bin/bash
+yarn install --pure-lockfile &&
+yarn run prisma generate &&
+yarn run prisma deploy &&
+yarn run relay &&
+docker build . -t engrafo ||
+echo 'FAILURE' && exit 1
