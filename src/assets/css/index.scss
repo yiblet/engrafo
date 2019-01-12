@@ -1,10 +1,31 @@
 // TODO: don't set any global styles
+@import './media';
 body {
   margin: 0;
 }
 
 .highlight {
-  background-color: yellow;
+  background-color: rgba(255, 255, 0, 0.4);
+  font-style: inherit;
+}
+
+.commented {
+  background-color: rgba(0, 0, 0, 0.05);
+
+}
+
+.placeholder {
+    @include media("<desktop", ">=tablet") {
+        width: 300px;
+    }
+
+    @include media("<hd", ">=desktop") {
+        width: 300px;
+    }
+
+    @include media(">=hd") {
+        width: 500px;
+    }
 }
 
 .comments {

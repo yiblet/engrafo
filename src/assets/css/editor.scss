@@ -1,3 +1,5 @@
+@import './media';
+
 .RichEditor-root {
   background: #fff;
   border: 1px solid #ddd;
@@ -11,6 +13,23 @@
   cursor: text;
   font-size: 16px;
   margin-top: 10px;
+
+    @include media("<desktop", ">=tablet") {
+        font-size: 12px;
+    }
+
+    @include media("<hd", ">=desktop") {
+        font-size: 14px;
+    }
+
+    @include media(">=hd") {
+        font-size: 16px;
+    }
+}
+
+
+.RichEditor-frozen {
+    width: 100%;
 }
 
 .RichEditor-editor .public-DraftEditorPlaceholder-root,
@@ -24,7 +43,7 @@
 }
 
 .RichEditor-editor .public-DraftEditor-content {
-  min-height: 100px;
+  min-height: 50px;
 }
 
 .RichEditor-hidePlaceholder .public-DraftEditorPlaceholder-root {

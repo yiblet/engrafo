@@ -1,5 +1,5 @@
 import React from "react";
-import { Editor, EditorState, RichUtils } from "draft-js";
+import { Editor, EditorState, RichUtils } from "../draft";
 import "../../css/modules/button.scss";
 
 // props { readOnly, defaultState }
@@ -42,7 +42,10 @@ export default class RichEditorExample extends React.Component {
   // -- methods
   constructor(props) {
     super(props);
-    if (props.initialState) this.onChange(props.initialState);
+  }
+
+  componentDidMount() {
+    if (this.props.initialState) this.onChange(this.props.initialState);
   }
 
   render() {
@@ -62,6 +65,8 @@ export default class RichEditorExample extends React.Component {
         className += " RichEditor-hidePlaceholder";
       }
     }
+
+    if (this.props.readOnly) className += " RichEditor-frozen";
 
     return (
       <div className="RichEditor-root">
@@ -88,7 +93,7 @@ export default class RichEditorExample extends React.Component {
             onChange={this.onChange}
             onTab={this.onTab}
             ref="editor"
-            spellCheck={true}
+            spellCheck={!this.props.readOnly}
             readOnly={this.props.readOnly}
           />
         </div>

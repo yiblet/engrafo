@@ -5,7 +5,11 @@
 // Parameters:
 // - rangeObject: a Range whose start and end containers are text nodes.
 // - highlightClass: the CSS class the text pieces in the range should get, defaults to 'highlighted-range'.
-export default function highlightRange(rangeObject, highlightClass) {
+export default function highlightRange(
+  rangeObject,
+  highlightClass,
+  modify = null
+) {
   // Ignore range if empty.
   if (rangeObject.collapsed) {
     return;
@@ -27,15 +31,17 @@ export default function highlightRange(rangeObject, highlightClass) {
   // Highlight each node
   var highlights = [];
   for (var nodeIdx in nodes) {
-    highlights.push(highlightNode(nodes[nodeIdx], highlightClass));
+    highlights.push(highlightNode(nodes[nodeIdx], highlightClass, modify));
   }
 
   // The rangeObject gets messed up by our DOM changes. Be kind and restore.
   rangeObject.setStart(startContainer, startOffset);
   rangeObject.setEnd(endContainer, endOffset);
 
+  let cleaned = { cleaned: false };
   // Return a function that cleans up the highlights.
-  function cleanupHighlights() {
+  function cleanupHighlights(newClass = null) {
+    if (cleaned.cleaned) return;
     // Remember range details to restore it later.
     var startContainer = rangeObject.startContainer;
     var startOffset = rangeObject.startOffset;
@@ -44,12 +50,14 @@ export default function highlightRange(rangeObject, highlightClass) {
 
     // Remove each of the created highlights.
     for (var highlightIdx in highlights) {
-      removeHighlight(highlights[highlightIdx]);
+      if (!newClass) removeHighlight(highlights[highlightIdx]);
+      else highlights[highlightIdx].className = newClass;
     }
 
     // Be kind and restore the rangeObject again.
     rangeObject.setStart(startContainer, startOffset);
     rangeObject.setEnd(endContainer, endOffset);
+    cleaned.cleaned = true;
   }
   return cleanupHighlights;
 }
@@ -181,9 +189,10 @@ export function setRangeToTextNodes(rangeObject) {
 }
 
 // Replace [node] with <span class=[highlightClass]>[node]</span>
-function highlightNode(node, highlightClass) {
+function highlightNode(node, highlightClass, modify) {
   // Create a highlight
   var highlight = document.createElement("span");
+  if (modify) modify(highlight);
   highlight.classList.add(highlightClass);
 
   // Wrap it around the text node

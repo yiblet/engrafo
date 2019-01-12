@@ -45,6 +45,7 @@
     "draft-js": "^0.10.5",
     "eslint": "^5.9.0",
     "eslint-plugin-flowtype": "^3.2.1",
+    "flow-bin": "^0.90.0",
     "graphql": "^14.0.2",
     "jest": "24.0.0-alpha.9",
     "klaw-sync": "^6.0.0",

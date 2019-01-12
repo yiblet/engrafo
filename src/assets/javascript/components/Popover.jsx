@@ -1,12 +1,22 @@
-//@flow strict-local
+//@flow
+import Editor from "./Editor";
 import React from "react";
-import { textNodesInRange } from "./../highlight";
 import debounce from "./../debounce";
-import Editor from "./editor";
+import environment from "../environment";
 import highlightRange, {
   setRangeToTextNodes,
   getFirstTextNode
 } from "../highlight";
+import type { Pointer, RawRange } from "../range";
+import { graphql, commitMutation } from "react-relay";
+import { textNodesInRange } from "./../highlight";
+import { toRawRange, fromRawRange } from "../range";
+import type {
+  CommentCreateInput,
+  PopoverCreateCommentMutationResponse
+} from "./__generated__/PopoverCreateCommentMutation.graphql";
+
+import { convertToRaw } from "../draft";
 
 type State = {
   boundingRect: ?DOMRect,
@@ -14,114 +24,41 @@ type State = {
   offsets: { x: number, y: number },
   selected: boolean,
   selected_listener: () => void,
-  active_ranges: Set<() => void>,
-  timeout?: TimeoutID
+  active_ranges: ?() => void,
+  timeout?: TimeoutID,
+  rawRange?: RawRange
 };
 
-type Pointer = {
-  id: string,
-  textOffset: number
-};
-
-type RawRange = {
-  start: Pointer,
-  end: Pointer
-};
-
-function nodeTextLength(node: Node): number {
-  switch (node.nodeType) {
-    case Node.ELEMENT_NODE:
-      //$FlowFixMe
-      return node.innerText.length;
-    case Node.TEXT_NODE:
-      //$FlowFixMe
-      return node.length;
-    default:
-      return 0;
-  }
-}
-
-function toRawRange(range: Range): RawRange {
-  setRangeToTextNodes(range);
-  let arr = [
-    { container: range.startContainer, offset: range.startOffset },
-    { container: range.endContainer, offset: range.endOffset }
-  ].map(({ container, offset }) => {
-    if (!container.parentElement) throw "all text have parent elements";
-    let id = container.parentElement.id;
-    if (!container.parentElement.id) throw "all parent elements must have ids";
-
-    let textOffset = offset;
-    for (let i = container.previousSibling; i; i = i.previousSibling) {
-      textOffset += nodeTextLength(i);
-    }
-    return { container, id, textOffset };
-  });
-
-  let res = {
-    start: arr[0],
-    end: arr[1]
+function createCommentInput(
+  content: string,
+  rawRange: RawRange
+): CommentCreateInput {
+  return {
+    content: content,
+    startOffset: rawRange.start.textOffset,
+    startId: rawRange.start.id,
+    endOffset: rawRange.end.textOffset,
+    endId: rawRange.end.id
   };
-  return res;
 }
 
-function fromRawRange(rawRange: RawRange): Range {
-  let ranges = [rawRange.start, rawRange.end]
-    .map(({ id, textOffset }) => {
-      let element = document.getElementById(id);
-      if (!element) throw "nonexistent element";
-      let child = element.firstChild;
-      let seen = 0;
-      let lastText = null;
-      while (child != null && seen < textOffset) {
-        let len = nodeTextLength(child);
-        if (len === 0) {
-          child = child.nextSibling;
-          continue;
-        }
-        lastText = child;
-        let newSeen = seen + len;
-        if (newSeen >= textOffset) {
-          let res = {
-            offset: textOffset - seen,
-            node: getFirstTextNode(child)
-          };
-          return res;
-        }
-        seen = newSeen;
-        child = child.nextSibling;
-      }
-
-      let res = {
-        offset:
-          textOffset +
-          (lastText === null ? 0 : nodeTextLength(lastText)) -
-          seen,
-        node: getFirstTextNode(lastText !== null ? lastText : element)
-      };
-      return res;
-    })
-    .map(({ node, offset }) => {
-      if (nodeTextLength(node) < offset) return { node, offset: 0 };
-      else return { node, offset };
-    });
-
-  let range = document.createRange();
-  let start = ranges[0],
-    end = ranges[1];
-
-  range.setStart(start.node, start.offset);
-  range.setEnd(end.node, end.offset);
-  return range;
-}
+const createComment = graphql`
+  mutation PopoverCreateCommentMutation($input: CommentCreateInput!) {
+    createComment(data: $input) {
+      id
+    }
+  }
+`;
 
 export default class Popover extends React.Component<{}, State> {
+  editor: ?Editor = null;
+
   state = {
     selected: false,
     hover: false,
     boundingRect: null,
     offsets: { x: 0, y: 0 },
-    active_ranges: new Set(),
+    active_ranges: null,
     selected_listener: () => {}
   };
 
@@ -130,10 +67,8 @@ export default class Popover extends React.Component<{}, State> {
   static TIME_TO_MOUSE_OUT = 400;
 
   clear_ranges = () => {
-    this.state.active_ranges.forEach(
-      undo => undo instanceof Function && undo()
-    );
-    this.state.active_ranges.clear();
+    this.state.active_ranges && this.state.active_ranges();
+    return { active_ranges: null, rawRange: undefined };
   };
 
   clear_selection = () => {
@@ -150,10 +85,11 @@ export default class Popover extends React.Component<{}, State> {
 
   cancel = () => {
     this.clear_selection();
-    this.clear_ranges();
     this.setState(state => {
+      let ranges = this.clear_ranges();
       state.timeout && clearTimeout(state.timeout);
       return {
+        ...ranges,
         timeout: undefined,
         hover: false,
         selected: false
@@ -168,6 +104,7 @@ export default class Popover extends React.Component<{}, State> {
       if (!currentRange) {
         return {};
       }
+      currentRange = currentRange.cloneRange();
       let startNode = currentRange.startContainer;
       let valid = false;
       while (startNode) {
@@ -181,33 +118,39 @@ export default class Popover extends React.Component<{}, State> {
       if (valid)
         this.setState(state => {
           let { active_ranges } = state;
+          active_ranges && active_ranges();
           let boundingRect = currentRange.getBoundingClientRect();
           if (boundingRect.width !== 0 && boundingRect.height !== 0) {
-            for (let i = 0; i < currentSelection.rangeCount; ++i) {
-              let range = currentSelection.getRangeAt(i);
-              if (!range) continue;
-              range = fromRawRange(toRawRange(range));
-              let undo = highlightRange(range, "highlight");
-              active_ranges.add(undo);
-            }
+            let range = currentSelection.getRangeAt(0);
+            if (!range) throw "range is not; not possible";
+            let rawRange = toRawRange(range);
+            range = fromRawRange(rawRange);
+            let undo = highlightRange(range, "highlight");
             return {
               selected: true,
               boundingRect: boundingRect,
               offsets: {
                 x: window.pageXOffset,
                 y: window.pageYOffset
-              }
+              },
+              active_ranges: undo,
+              rawRange
+            };
+          } else if (this.state.hover) {
+            return {
+              selected: false
             };
           } else {
             return {
+              ...this.clear_ranges(),
               selected: false
             };
           }
         });
-    } else {
+    } else if (!this.state.hover) {
       this.setState(state => {
-        this.clear_ranges();
         return {
+          ...this.clear_ranges(),
           selected: false
         };
       });
@@ -220,23 +163,22 @@ export default class Popover extends React.Component<{}, State> {
       return { hover: true, timeout: undefined };
     });
   };
+
   hoverOff = () => {
-    this.setState(state => {
-      if (state.timeout) window.clearTimeout(state.timeout);
-      return {
-        timeout: window.setTimeout(
-          () =>
-            this.setState(state => {
-              this.clear_ranges();
-              return {
-                selected: false,
-                hover: false
-              };
-            }),
-          Popover.TIME_TO_MOUSE_OUT
-        )
-      };
-    });
+    if (this.state.timeout) window.clearTimeout(this.state.timeout);
+    let timeout = window.setTimeout(
+      () =>
+        this.setState(state => {
+          return {
+            ...this.clear_ranges(),
+            selected: false,
+            hover: false
+          };
+        }),
+      Popover.TIME_TO_MOUSE_OUT
+    );
+
+    this.setState({ timeout });
   };
 
   componentDidMount = () => {
@@ -250,6 +192,21 @@ export default class Popover extends React.Component<{}, State> {
 
   componentWillUnmount = () => {
     window.removeEventListener(Popover.EVENT, this.state.selected_listener);
+  };
+
+  submit = () => {
+    if (this.editor) {
+      let content = JSON.stringify(
+        convertToRaw(this.editor.state.editorState.getCurrentContent())
+      );
+      if (!this.state.rawRange) return;
+      let input = createCommentInput(content, this.state.rawRange);
+      commitMutation(environment, {
+        mutation: createComment,
+        variables: { input }
+      });
+      this.cancel();
+    }
   };
 
   render() {
@@ -268,11 +225,17 @@ export default class Popover extends React.Component<{}, State> {
             minWidth: width
           }}
         >
-          <Editor>
+          <Editor
+            ref={editor => {
+              this.editor = editor;
+            }}
+          >
             <div className="editor-bottom">
               <span className="bottom-text"> Add a Comment...</span>
               <div className="btn-container">
-                <button className="btn-light">Submit</button>
+                <button className="btn-light" onClick={this.submit}>
+                  Submit
+                </button>
                 <button className="btn-light" onClick={this.cancel}>
                   Cancel
                 </button>
@@ -282,8 +245,7 @@ export default class Popover extends React.Component<{}, State> {
         </div>
       );
     } else {
-      this.clear_ranges();
-      return <div />;
+      return <React.Fragment />;
     }
   }
 }

@@ -10,9 +10,12 @@ type Paper {
   comments: [Comment!]!
 }
 
+
 type Comment {
   id: ID! @unique
   content: String!
-  paper: Paper!
-  poster: User!
+  startId: String!
+  startOffset: Int!
+  endId: String!
+  endOffset: Int!
 }
