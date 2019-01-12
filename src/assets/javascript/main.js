@@ -46,7 +46,7 @@ function wrap(el: Element) {
   pageContent.appendChild(div);
 }
 
-export default async function main(el: ?Element) {
+export default function main(el: ?Element) {
   if (!el) return;
   wrap(el);
   citations(el);

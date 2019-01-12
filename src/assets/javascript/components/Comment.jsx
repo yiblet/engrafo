@@ -6,7 +6,7 @@ import type { Comment_comments as Comments } from "./__generated__/Comment_comme
 import { toRawRange, fromRawRange } from "../range";
 import highlightRange from "../highlight";
 import { EditorState, convertFromRaw } from "../draft";
-import array from "lodash/array";
+import { zip3 } from "../util.js";
 
 import type { Pointer, RawRange } from "../range";
 
@@ -96,6 +96,8 @@ class CommentHighlight extends React.Component<Prop, CommentHighlightState> {
     offset: { x: 0, y: 0 }
   };
 
+  click = () => {};
+
   addRange() {
     this.setState((state, { comments }) => {
       let ranges = comments.map(comment =>
@@ -183,9 +185,8 @@ class CommentHighlight extends React.Component<Prop, CommentHighlightState> {
 
     return (
       <React.Fragment>
-        {array
-          .zip(editors, rects, this.props.comments)
-          .map(([editor, rect, comment]) => (
+        {zip3(editors, rects, this.props.comments).map(
+          ([editor, rect, comment]) => (
             <div
               style={{
                 marginBottom: "12px"
@@ -195,7 +196,8 @@ class CommentHighlight extends React.Component<Prop, CommentHighlightState> {
               {editor}
               {rect}
             </div>
-          ))}
+          )
+        )}
       </React.Fragment>
     );
   }
