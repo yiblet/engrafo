@@ -6,7 +6,7 @@ import type { Comment_comments as Comments } from "./__generated__/Comment_comme
 import { toRawRange, fromRawRange } from "../range";
 import highlightRange from "../highlight";
 import { EditorState, convertFromRaw } from "../draft";
-import { zip3 } from "../util.js";
+import { zip2 } from "../util.js";
 
 import type { Pointer, RawRange } from "../range";
 
@@ -85,6 +85,7 @@ type CommentHighlightState = {
   boundingRects: Array<BoundingRect & Undo>,
   initialStates: Array<EditorState>,
   ranges: Array<Range>,
+  visibleComments: Set<number>,
   offset: Offset
 };
 
@@ -93,10 +94,24 @@ class CommentHighlight extends React.Component<Prop, CommentHighlightState> {
     initialStates: [],
     ranges: [],
     boundingRects: [],
+    visibleComments: new Set(),
     offset: { x: 0, y: 0 }
   };
 
-  click = () => {};
+  click = (event: Event, doms: Element[], idx: number) => {
+    if (doms[0].className === "commented-clicked") {
+      doms.forEach(dom => {
+        dom.className = "commented";
+      });
+      this.state.visibleComments.delete(idx);
+    } else {
+      doms.forEach(dom => {
+        dom.className = "commented-clicked";
+      });
+      this.state.visibleComments.add(idx);
+    }
+    this.forceUpdate();
+  };
 
   addRange() {
     this.setState((state, { comments }) => {
@@ -109,8 +124,12 @@ class CommentHighlight extends React.Component<Prop, CommentHighlightState> {
         y: window.pageYOffset
       };
       let boundingRects = ranges.map((range, idx) => {
-        let undo = highlightRange(range, "commented", (dom: Node) => {
-          dom.addEventListener("onclick", this.click);
+        let domGroup = [];
+        let undo = highlightRange(range, "commented", (dom: Element) => {
+          domGroup.push(dom);
+          dom.addEventListener("mousedown", (event: Event) =>
+            this.click(event, domGroup, idx)
+          );
         });
         return {
           ...clientRectToBoundingRect(range.getBoundingClientRect()),
@@ -164,42 +183,25 @@ class CommentHighlight extends React.Component<Prop, CommentHighlightState> {
   onHover = () => {};
 
   render() {
-    let editors: Array<Editor> = this.state.initialStates.map(state => (
-      <Editor readOnly={true} initialState={state} />
-    ));
-
-    let rects = this.state.boundingRects.map(({ top, left, width, height }) => {
+    let idxs = [...this.state.visibleComments.values()];
+    let editors = idxs.map(i => {
+      let { top, left, width, height } = this.state.boundingRects[i];
       return (
         <div
           style={{
             position: "absolute",
             top: top + this.state.offset.y,
-            left: left + this.state.offset.x,
-            width: width,
-            height: height,
-            zIndex: -1
+            left: left + this.state.offset.x + width + 12,
+            minWidth: 300
           }}
-        />
+          key={this.props.comments[i].id}
+        >
+          <Editor readOnly={true} initialState={this.state.initialStates[i]} />
+        </div>
       );
     });
 
-    return (
-      <React.Fragment>
-        {zip3(editors, rects, this.props.comments).map(
-          ([editor, rect, comment]) => (
-            <div
-              style={{
-                marginBottom: "12px"
-              }}
-              key={comment.id}
-            >
-              {editor}
-              {rect}
-            </div>
-          )
-        )}
-      </React.Fragment>
-    );
+    return <React.Fragment>{editors}</React.Fragment>;
   }
 }
 

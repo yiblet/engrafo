@@ -232,11 +232,11 @@ export default class Popover extends React.Component<{}, State> {
           >
             <div className="editor-bottom">
               <span className="bottom-text"> Add a Comment...</span>
-              <div className="btn-container">
-                <button className="btn-light" onClick={this.submit}>
+              <div className="button-container">
+                <button className="button-light" onClick={this.submit}>
                   Submit
                 </button>
-                <button className="btn-light" onClick={this.cancel}>
+                <button className="button-light" onClick={this.cancel}>
                   Cancel
                 </button>
               </div>

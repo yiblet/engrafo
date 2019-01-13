@@ -11,7 +11,12 @@ body {
 
 .commented {
   background-color: rgba(0, 0, 0, 0.05);
+  cursor:pointer;
+}
 
+.commented-clicked {
+  background-color: rgba(0, 255, 255, 0.4);
+  cursor:pointer;
 }
 
 .placeholder {

@@ -1,6 +1,9 @@
 //@flow
 
-export function zip2<A, B>(arr1: Array<A>, arr2: Array<B>): Array<[A, B]> {
+export function zip2<A, B>(
+  arr1: $ReadOnlyArray<A>,
+  arr2: $ReadOnlyArray<B>
+): Array<[A, B]> {
   let min_length = Number.MAX_SAFE_INTEGER;
   for (let arr of [arr1, arr2]) {
     min_length = arr.length < min_length ? arr.length : min_length;
