@@ -6,11 +6,11 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { QueryRenderer, graphql } from "react-relay";
 import environment from "./environment";
+import { getArxivId } from "./util";
 
 const query = graphql`
-  query rootQuery {
-    comments(orderBy: startId_ASC) {
-      id
+  query rootQuery($commentWhere: CommentWhereInput) {
+    comments(orderBy: startId_ASC, where: $commentWhere) {
       ...Comment_comments
     }
   }
@@ -43,7 +43,7 @@ export default function setupReact(el: Element) {
       <QueryRenderer
         environment={environment}
         query={query}
-        variables={{}}
+        variables={{ commentWhere: { paper: getArxivId() } }}
         render={render}
       />,
       comments

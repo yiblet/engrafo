@@ -16,7 +16,14 @@ import type {
   PopoverCreateCommentMutationResponse
 } from "./__generated__/PopoverCreateCommentMutation.graphql";
 
-import { convertToRaw } from "../draft";
+import Commenter from "./Commenter";
+import {
+  convertToRaw,
+  EditorState,
+  ContentState,
+  convertFromRaw
+} from "../draft";
+import { getArxivId } from "../util";
 
 type State = {
   boundingRect: ?DOMRect,
@@ -34,6 +41,7 @@ function createCommentInput(
   rawRange: RawRange
 ): CommentCreateInput {
   return {
+    paper: getArxivId(),
     content: content,
     startOffset: rawRange.start.textOffset,
     startId: rawRange.start.id,
@@ -51,8 +59,6 @@ const createComment = graphql`
 `;
 
 export default class Popover extends React.Component<{}, State> {
-  editor: ?Editor = null;
-
   state = {
     selected: false,
     hover: false,
@@ -194,19 +200,15 @@ export default class Popover extends React.Component<{}, State> {
     window.removeEventListener(Popover.EVENT, this.state.selected_listener);
   };
 
-  submit = () => {
-    if (this.editor) {
-      let content = JSON.stringify(
-        convertToRaw(this.editor.state.editorState.getCurrentContent())
-      );
-      if (!this.state.rawRange) return;
-      let input = createCommentInput(content, this.state.rawRange);
-      commitMutation(environment, {
-        mutation: createComment,
-        variables: { input }
-      });
-      this.cancel();
-    }
+  submit = (contentState: ContentState) => {
+    let content = JSON.stringify(convertToRaw(contentState));
+    if (!this.state.rawRange) return;
+    let input = createCommentInput(content, this.state.rawRange);
+    commitMutation(environment, {
+      mutation: createComment,
+      variables: { input }
+    });
+    this.cancel();
   };
 
   render() {
@@ -225,23 +227,11 @@ export default class Popover extends React.Component<{}, State> {
             minWidth: width
           }}
         >
-          <Editor
-            ref={editor => {
-              this.editor = editor;
-            }}
-          >
-            <div className="editor-bottom">
-              <span className="bottom-text"> Add a Comment...</span>
-              <div className="button-container">
-                <button className="button-light" onClick={this.submit}>
-                  Submit
-                </button>
-                <button className="button-light" onClick={this.cancel}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </Editor>
+          <Commenter
+            submit={this.submit}
+            cancel={this.cancel}
+            text={"Add a Comment..."}
+          />
         </div>
       );
     } else {

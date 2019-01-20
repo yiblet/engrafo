@@ -5,7 +5,7 @@ import { graphql, createFragmentContainer } from "react-relay";
 import type { Comment_comments as Comments } from "./__generated__/Comment_comments.graphql";
 import { toRawRange, fromRawRange } from "../range";
 import highlightRange from "../highlight";
-import { EditorState, convertFromRaw } from "../draft";
+import { EditorState, ContentState, convertFromRaw } from "../draft";
 import { zip2 } from "../util.js";
 
 import type { Pointer, RawRange } from "../range";
@@ -81,21 +81,25 @@ type Undo = {
   undo: () => void
 };
 
+type CommentState = {
+  range: Range,
+  initialState: EditorState,
+  boundingRect: BoundingRect,
+  reply: boolean,
+  undo: () => void
+};
+
 type CommentHighlightState = {
-  boundingRects: Array<BoundingRect & Undo>,
-  initialStates: Array<EditorState>,
-  ranges: Array<Range>,
+  comments: Array<CommentState>,
   visibleComments: Set<number>,
   offset: Offset
 };
 
 class CommentHighlight extends React.Component<Prop, CommentHighlightState> {
   state = {
-    initialStates: [],
-    ranges: [],
-    boundingRects: [],
     visibleComments: new Set(),
-    offset: { x: 0, y: 0 }
+    offset: { x: 0, y: 0 },
+    comments: []
   };
 
   click = (event: Event, doms: Element[], idx: number) => {
@@ -123,7 +127,7 @@ class CommentHighlight extends React.Component<Prop, CommentHighlightState> {
         x: window.pageXOffset,
         y: window.pageYOffset
       };
-      let boundingRects = ranges.map((range, idx) => {
+      let commentStates: Array<CommentState> = ranges.map((range, idx) => {
         let domGroup = [];
         let undo = highlightRange(range, "commented", (dom: Element) => {
           domGroup.push(dom);
@@ -132,17 +136,17 @@ class CommentHighlight extends React.Component<Prop, CommentHighlightState> {
           );
         });
         return {
-          ...clientRectToBoundingRect(range.getBoundingClientRect()),
-          undo
+          initialState: EditorState.createWithContent(
+            convertFromRaw(JSON.parse(comments[idx].content))
+          ),
+          range: range,
+          reply: false,
+          boundingRect: clientRectToBoundingRect(range.getBoundingClientRect()),
+          undo: undo
         };
       });
 
-      let initialStates = comments.map(comment =>
-        EditorState.createWithContent(
-          convertFromRaw(JSON.parse(comment.content))
-        )
-      );
-      return { ranges, offset, initialStates, boundingRects };
+      return { offset, comments: commentStates };
     }, this.updateDimensions);
   }
 
@@ -152,20 +156,22 @@ class CommentHighlight extends React.Component<Prop, CommentHighlightState> {
   }
 
   componentWillUnmount() {
-    this.state.boundingRects.map(rect => rect.undo());
+    this.state.comments.map(({ undo }) => undo());
     window.removeEventListener("resize", this.updateDimensions);
   }
 
   updateDimensions = () => {
     if (
-      this.state.ranges.length >= 1 &&
-      this.state.ranges[0].getBoundingClientRect().left !==
-        this.state.boundingRects[0].left
+      this.state.comments.length >= 1 &&
+      this.state.comments[0].range.getBoundingClientRect().left !==
+        this.state.comments[0].boundingRect.left
     ) {
-      let boundingRects = this.state.ranges.map((range, idx) => {
+      let comments = this.state.comments.map((comment, idx) => {
         return {
-          ...this.state.boundingRects[idx],
-          ...clientRectToBoundingRect(range.getBoundingClientRect())
+          ...comment,
+          boundingRect: clientRectToBoundingRect(
+            comment.range.getBoundingClientRect()
+          )
         };
       });
 
@@ -174,18 +180,36 @@ class CommentHighlight extends React.Component<Prop, CommentHighlightState> {
         y: window.pageYOffset
       };
 
-      console.log(boundingRects);
-
-      this.setState({ boundingRects, offset });
+      this.setState({ comments, offset });
     }
   };
 
   onHover = () => {};
+  reply = (idx: number) => {};
 
   render() {
     let idxs = [...this.state.visibleComments.values()];
     let editors = idxs.map(i => {
-      let { top, left, width, height } = this.state.boundingRects[i];
+      let {
+        range,
+        initialState,
+        boundingRect: { top, left, width, height },
+        reply
+      } = this.state.comments[i];
+
+      if (reply) {
+        let frag = (
+          <React.Fragment>
+            <span className="bottom-text"> Written by </span>
+            <div className="button-container">
+              <button className="button-light" onClick={() => this.reply(i)}>
+                Reply
+              </button>
+            </div>
+          </React.Fragment>
+        );
+      } else {
+      }
       return (
         <div
           style={{
@@ -196,7 +220,9 @@ class CommentHighlight extends React.Component<Prop, CommentHighlightState> {
           }}
           key={this.props.comments[i].id}
         >
-          <Editor readOnly={true} initialState={this.state.initialStates[i]} />
+          <Editor readOnly={true} initialState={initialState}>
+            <div className="editor-bottom" />
+          </Editor>
         </div>
       );
     });

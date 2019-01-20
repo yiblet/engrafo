@@ -34,3 +34,11 @@ export function zip3<A, B, C>(
 
   return res;
 }
+
+export function getArxivId(): string {
+  if (window && window.arxivId && window.arxivId instanceof String) {
+    return window.arxivId;
+  } else {
+    return "__TEST__";
+  }
+}
